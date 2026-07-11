@@ -7,6 +7,26 @@ Drive originals).
 Built for a take-home assignment. Backend: Flask / SQLAlchemy / Postgres. Frontend:
 React / TypeScript / Vite / Tailwind / shadcn-ui.
 
+## Live demo
+
+- App: https://frontend-psi-eight-94.vercel.app
+- API: https://acme-dataroom-api.onrender.com
+
+Both are on free tiers, which means two things worth knowing before you click around:
+
+- **The Render backend spins down after 15 minutes idle** and takes ~50s to wake back up on
+  the next request — the first click after a while looks stuck; it isn't.
+- **Uploaded/imported file bytes don't survive that spin-down** (Render's free tier has no
+  persistent disk; see "Design decisions" below). File names/metadata persist in Postgres,
+  but viewing a file after an idle period may 404 until you re-import it. A paid Render plan
+  with a persistent disk fixes this; documented as a known tradeoff rather than worked around,
+  since the assignment explicitly permits local-disk storage over blob storage.
+- **The Google OAuth consent screen is in Testing mode** (not verified by Google, which is a
+  review process meant for production apps, not a take-home). Only Google accounts added as
+  test users in the Cloud Console can complete the "Connect Google Drive" flow — if you're
+  reviewing this and want to test that part, let me know your Google account email and I'll
+  add it. Upload, view, and delete all work for anyone regardless.
+
 ![Empty state](docs/screenshots/01-empty-state.png)
 ![Drive import dialog](docs/screenshots/02-drive-import-dialog.png)
 ![Imported files](docs/screenshots/03-imported-files.png)
