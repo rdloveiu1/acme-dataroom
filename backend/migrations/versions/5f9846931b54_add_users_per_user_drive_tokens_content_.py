@@ -17,6 +17,14 @@ depends_on = None
 
 
 def upgrade():
+    # Pre-auth rows have no user to attribute them to, and the new columns
+    # below are NOT NULL. This app has no real user-generated data yet at
+    # this point in its life (take-home project, pre-launch), so clearing
+    # them is safe rather than trying to backfill an owner that doesn't
+    # exist. Do NOT reuse this pattern once there's real user data.
+    op.execute("DELETE FROM files")
+    op.execute("DELETE FROM google_oauth_tokens")
+
     # pg_trgm backs a GIN index that makes ILIKE '%term%' substring search
     # (filename + extracted content) fast at scale, instead of a sequential
     # scan over every row on every keystroke.
