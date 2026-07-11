@@ -4,7 +4,7 @@ A due-diligence document repository: sign in, import files from Google Drive or 
 your computer, search across filenames and file contents, view files in the browser, and
 delete them from the room (without touching the Drive originals).
 
-Built for a take-home assignment. Backend: Flask / SQLAlchemy / Postgres. Frontend:
+Backend: Flask / SQLAlchemy / Postgres. Frontend:
 React / TypeScript / Vite / Tailwind / shadcn-ui.
 
 ## Live demo
@@ -19,16 +19,16 @@ Both are on free tiers, which means two things worth knowing before you click ar
 - **Uploaded/imported file bytes don't survive that spin-down** (Render's free tier has no
   persistent disk; see "Design decisions" below). File names/metadata persist in Postgres,
   but viewing a file after an idle period may 404 until you re-import it. A paid Render plan
-  with a persistent disk fixes this; documented as a known tradeoff rather than worked around,
-  since the assignment explicitly permits local-disk storage over blob storage.
-- **The Google OAuth consent screen is in Testing mode** (not verified by Google, which is a
-  review process meant for production apps, not a take-home). Only Google accounts added as
-  test users in the Cloud Console can complete the "Connect Google Drive" flow — if you're
-  reviewing this and want to test that part, let me know your Google account email and I'll
-  add it. Sign-up/login, upload, search, view, and delete all work for anyone regardless.
-- **Sign up with any email/password** — there's no email verification step (out of scope for
-  a take-home), so any well-formed email works. The data room is shared: every signed-up user
-  sees the same files, matching how a real due-diligence data room works for a deal team.
+  with a persistent disk fixes this; documented here as a known tradeoff of local-disk storage
+  on a free host, rather than worked around.
+- **The Google OAuth consent screen is in Testing mode** (not yet through Google's
+  verification review, which is a longer process meant for production apps). Only Google
+  accounts added as test users in the Cloud Console can complete the "Connect Google Drive"
+  flow — let me know your Google account email and I'll add it if you want to test that part.
+  Sign-up/login, upload, search, view, and delete all work for anyone regardless.
+- **Sign up with any email/password** — there's no email verification step yet, so any
+  well-formed email works. The data room is shared: every signed-up user sees the same files,
+  matching how a real due-diligence data room works for a deal team.
 
 ![Login](docs/screenshots/05-login.png)
 ![Empty state](docs/screenshots/01-empty-state.png)
@@ -82,14 +82,13 @@ impersonate the OAuth grant.
   (narrowest possible grant) but it only lets `files.list()` see files the app has already
   touched — it can't browse a user's existing Drive. That only works if you use Google's
   official Picker widget, which handles per-file grants internally. Since this app implements
-  its own file browser (the brief allows either), listing arbitrary existing files needs
-  `drive.readonly`: full read access, no write/delete capability in Drive. Documented in
-  `app/google_client.py`.
+  its own file browser instead, listing arbitrary existing files needs `drive.readonly`: full
+  read access, no write/delete capability in Drive. Documented in `app/google_client.py`.
 - **Token refresh is centralized.** Every Drive-touching route goes through
   `google_client.get_credentials()`, which transparently refreshes an expired access token
   and persists the new one. If the *refresh* token itself is invalid (revoked by the user,
-  or otherwise dead — the "expired oAuth token" edge case called out in the brief), the
-  stale row is deleted and a 401 is returned with a machine-readable code
+  or otherwise dead), the stale row is deleted and a 401 is returned with a machine-readable
+  code
   (`drive_reauth_required` / `drive_not_connected`) that the frontend uses to reset to a
   clean "reconnect" state rather than showing a raw error.
 - **Google-native files (Docs/Sheets/Slides) are exported, not downloaded.** They have no
