@@ -1,0 +1,33 @@
+services:
+  - name: acme-dataroom-api
+    type: web
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt && flask db upgrade
+    startCommand: gunicorn wsgi:app
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: acme-dataroom-db
+          property: connectionString
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: TOKEN_ENCRYPTION_KEY
+        sync: false
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: OAUTHLIB_RELAX_TOKEN_SCOPE
+        value: "1"
+      - key: FLASK_APP
+        value: wsgi.py
+
+databases:
+  - name: acme-dataroom-db
+    plan: free
