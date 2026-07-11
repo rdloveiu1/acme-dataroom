@@ -1,0 +1,26 @@
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+
+# Python / backend
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+
+# Env files (secrets)
+.env
+backend/.env
+frontend/.env
+frontend/.env.local
+
+# Google OAuth client secret JSON, if ever downloaded into the repo
+client_secret_*.json
+
+# Uploaded/imported file storage
+backend/storage/*
+!backend/storage/.gitkeep
+
+# OS / editor
+.DS_Store
+.vscode/
