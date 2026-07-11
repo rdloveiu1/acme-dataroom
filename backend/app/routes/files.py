@@ -2,26 +2,37 @@ import os
 import uuid
 from datetime import datetime, timezone
 
-from flask import Blueprint, current_app, jsonify, request, send_from_directory
+from flask import Blueprint, current_app, jsonify, request, send_from_directory, session
 from werkzeug.utils import secure_filename
 
+from app.auth_utils import login_required
 from app.extensions import db
 from app.models import File
+from app.text_extract import extract_text
 
 files_bp = Blueprint("files", __name__)
 
 
 @files_bp.get("")
+@login_required
 def list_files():
-    rows = (
-        File.query.filter_by(deleted_at=None)
-        .order_by(File.created_at.desc())
-        .all()
-    )
+    query = File.query.filter_by(deleted_at=None)
+
+    search = (request.args.get("q") or "").strip()
+    if search:
+        # ILIKE '%term%' backed by a pg_trgm GIN index (see migration) so this
+        # stays fast as the room grows, instead of a full sequential scan.
+        pattern = f"%{search}%"
+        query = query.filter(
+            db.or_(File.name.ilike(pattern), File.content_text.ilike(pattern))
+        )
+
+    rows = query.order_by(File.created_at.desc()).all()
     return jsonify([row.to_dict() for row in rows])
 
 
 @files_bp.post("/upload")
+@login_required
 def upload_file():
     upload = request.files.get("file")
     if upload is None or upload.filename == "":
@@ -32,12 +43,15 @@ def upload_file():
     destination_path = os.path.join(current_app.config["STORAGE_DIR"], storage_id)
     upload.save(destination_path)
 
+    mime_type = upload.mimetype or "application/octet-stream"
     file_row = File(
         name=original_name,
-        mime_type=upload.mimetype or "application/octet-stream",
+        mime_type=mime_type,
         size_bytes=os.path.getsize(destination_path),
         source="upload",
         storage_path=storage_id,
+        uploaded_by_id=session["user_id"],
+        content_text=extract_text(destination_path, mime_type),
     )
     db.session.add(file_row)
     db.session.commit()
@@ -46,6 +60,7 @@ def upload_file():
 
 
 @files_bp.get("/<file_id>")
+@login_required
 def view_file(file_id):
     file_row = File.query.filter_by(id=file_id, deleted_at=None).first()
     if file_row is None:
@@ -61,6 +76,7 @@ def view_file(file_id):
 
 
 @files_bp.delete("/<file_id>")
+@login_required
 def delete_file(file_id):
     file_row = File.query.filter_by(id=file_id, deleted_at=None).first()
     if file_row is None:

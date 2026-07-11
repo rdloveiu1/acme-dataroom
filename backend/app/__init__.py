@@ -20,6 +20,16 @@ def create_app():
     )
     app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024  # 100 MB upload cap
 
+    # Login sessions are a cookie shared between two different origins
+    # (Vercel frontend, Render backend) in production, which only works if
+    # the cookie is SameSite=None -- but that requires Secure, which in turn
+    # requires HTTPS, which local dev over plain http doesn't have. `RENDER`
+    # is auto-set by Render on every service, so it doubles as our "are we
+    # in a real cross-origin HTTPS deployment" signal.
+    is_deployed = bool(os.environ.get("RENDER"))
+    app.config["SESSION_COOKIE_SAMESITE"] = "None" if is_deployed else "Lax"
+    app.config["SESSION_COOKIE_SECURE"] = is_deployed
+
     os.makedirs(app.config["STORAGE_DIR"], exist_ok=True)
 
     db.init_app(app)

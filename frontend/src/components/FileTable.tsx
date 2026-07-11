@@ -23,10 +23,12 @@ export function FileTable({
   files,
   loading,
   onDeleted,
+  searchActive = false,
 }: {
   files: DataroomFile[]
   loading: boolean
   onDeleted: () => void
+  searchActive?: boolean
 }) {
   const [pendingDelete, setPendingDelete] = useState<DataroomFile | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -60,9 +62,13 @@ export function FileTable({
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-20 text-center">
         <FileIcon className="size-8 text-muted-foreground" />
-        <p className="mt-3 text-sm font-medium">No files yet</p>
+        <p className="mt-3 text-sm font-medium">
+          {searchActive ? 'No matching files' : 'No files yet'}
+        </p>
         <p className="text-sm text-muted-foreground">
-          Import files from Google Drive or upload from your computer.
+          {searchActive
+            ? 'Try a different search term.'
+            : 'Import files from Google Drive or upload from your computer.'}
         </p>
       </div>
     )
@@ -77,6 +83,7 @@ export function FileTable({
             <TableHead>Source</TableHead>
             <TableHead>Size</TableHead>
             <TableHead>Added</TableHead>
+            <TableHead>Added by</TableHead>
             <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
@@ -108,6 +115,9 @@ export function FileTable({
                 {formatBytes(file.sizeBytes)}
               </TableCell>
               <TableCell className="text-muted-foreground">{formatDate(file.createdAt)}</TableCell>
+              <TableCell className="text-muted-foreground">
+                {file.uploadedByEmail ?? '—'}
+              </TableCell>
               <TableCell>
                 <Button
                   variant="ghost"

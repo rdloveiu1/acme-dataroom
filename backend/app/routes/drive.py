@@ -1,20 +1,23 @@
 import os
 import uuid
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify, request, session
 
 from app import google_client
+from app.auth_utils import login_required
 from app.extensions import db
 from app.models import File
+from app.text_extract import extract_text
 
 drive_bp = Blueprint("drive", __name__)
 
 
 @drive_bp.get("/files")
+@login_required
 def list_files():
     page_token = request.args.get("pageToken")
     try:
-        result = google_client.list_drive_files(page_token=page_token)
+        result = google_client.list_drive_files(session["user_id"], page_token=page_token)
     except google_client.DriveNotConnectedError:
         return jsonify({"error": "drive_not_connected"}), 401
     except google_client.DriveReauthRequiredError:
@@ -29,6 +32,7 @@ def list_files():
 
 
 @drive_bp.post("/import")
+@login_required
 def import_file():
     body = request.get_json(silent=True) or {}
     google_file_id = body.get("fileId")
@@ -47,7 +51,9 @@ def import_file():
     destination_path = os.path.join(current_app.config["STORAGE_DIR"], storage_id)
 
     try:
-        metadata = google_client.download_drive_file(google_file_id, destination_path)
+        metadata = google_client.download_drive_file(
+            session["user_id"], google_file_id, destination_path
+        )
     except google_client.DriveNotConnectedError:
         return jsonify({"error": "drive_not_connected"}), 401
     except google_client.DriveReauthRequiredError:
@@ -57,14 +63,17 @@ def import_file():
             os.remove(destination_path)
         return jsonify({"error": "download_failed"}), 502
 
+    mime_type = metadata.get("mimeType", "application/octet-stream")
     size_bytes = os.path.getsize(destination_path)
     file_row = File(
         name=metadata.get("name", "Untitled"),
-        mime_type=metadata.get("mimeType", "application/octet-stream"),
+        mime_type=mime_type,
         size_bytes=size_bytes,
         source="google_drive",
         google_file_id=google_file_id,
         storage_path=storage_id,
+        uploaded_by_id=session["user_id"],
+        content_text=extract_text(destination_path, mime_type),
     )
     db.session.add(file_row)
     db.session.commit()

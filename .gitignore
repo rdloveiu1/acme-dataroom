@@ -1,6 +1,7 @@
 # Node / frontend
 frontend/node_modules/
 frontend/dist/
+frontend/.vercel/
 
 # Python / backend
 backend/venv/

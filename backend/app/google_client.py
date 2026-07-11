@@ -97,11 +97,11 @@ def build_auth_flow() -> Flow:
     return flow
 
 
-def save_token_from_flow(flow: Flow) -> None:
+def save_token_from_flow(flow: Flow, user_id: str) -> None:
     creds = flow.credentials
-    token_row = GoogleOAuthToken.query.first()
+    token_row = GoogleOAuthToken.query.filter_by(user_id=user_id).first()
     if token_row is None:
-        token_row = GoogleOAuthToken()
+        token_row = GoogleOAuthToken(user_id=user_id)
         db.session.add(token_row)
 
     token_row.access_token = creds.token
@@ -111,8 +111,8 @@ def save_token_from_flow(flow: Flow) -> None:
     db.session.commit()
 
 
-def get_credentials() -> Credentials:
-    token_row = GoogleOAuthToken.query.first()
+def get_credentials(user_id: str) -> Credentials:
+    token_row = GoogleOAuthToken.query.filter_by(user_id=user_id).first()
     if token_row is None:
         raise DriveNotConnectedError()
 
@@ -141,17 +141,17 @@ def get_credentials() -> Credentials:
     return creds
 
 
-def is_connected() -> bool:
-    return GoogleOAuthToken.query.first() is not None
+def is_connected(user_id: str) -> bool:
+    return GoogleOAuthToken.query.filter_by(user_id=user_id).first() is not None
 
 
-def disconnect() -> None:
-    GoogleOAuthToken.query.delete()
+def disconnect(user_id: str) -> None:
+    GoogleOAuthToken.query.filter_by(user_id=user_id).delete()
     db.session.commit()
 
 
-def list_drive_files(page_token: str | None = None) -> dict:
-    creds = get_credentials()
+def list_drive_files(user_id: str, page_token: str | None = None) -> dict:
+    creds = get_credentials(user_id)
     service = build("drive", "v3", credentials=creds)
     response = (
         service.files()
@@ -166,8 +166,8 @@ def list_drive_files(page_token: str | None = None) -> dict:
     return response
 
 
-def download_drive_file(file_id: str, destination_path: str) -> dict:
-    creds = get_credentials()
+def download_drive_file(user_id: str, file_id: str, destination_path: str) -> dict:
+    creds = get_credentials(user_id)
     service = build("drive", "v3", credentials=creds)
 
     metadata = service.files().get(fileId=file_id, fields="id, name, mimeType, size").execute()

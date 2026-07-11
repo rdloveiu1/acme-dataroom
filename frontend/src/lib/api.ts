@@ -7,6 +7,7 @@ export type DataroomFile = {
   sizeBytes: number
   source: 'upload' | 'google_drive'
   createdAt: string
+  uploadedByEmail: string | null
 }
 
 export type DriveFile = {
@@ -17,12 +18,23 @@ export type DriveFile = {
   iconLink?: string
 }
 
+export type CurrentUser = {
+  id: string
+  email: string
+}
+
 export class DriveAuthError extends Error {
   code: 'drive_not_connected' | 'drive_reauth_required'
 
   constructor(code: 'drive_not_connected' | 'drive_reauth_required') {
     super(code)
     this.code = code
+  }
+}
+
+export class AuthRequiredError extends Error {
+  constructor() {
+    super('auth_required')
   }
 }
 
@@ -37,6 +49,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     if (body.error === 'drive_not_connected' || body.error === 'drive_reauth_required') {
       throw new DriveAuthError(body.error)
     }
+    if (body.error === 'auth_required') {
+      throw new AuthRequiredError()
+    }
   }
 
   if (!res.ok) {
@@ -49,6 +64,24 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  register: (email: string, password: string) =>
+    request<CurrentUser>('/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    }),
+
+  login: (email: string, password: string) =>
+    request<CurrentUser>('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    }),
+
+  logout: () => request<void>('/auth/logout', { method: 'POST' }),
+
+  me: () => request<CurrentUser>('/auth/me'),
+
   driveStatus: () => request<{ connected: boolean }>('/auth/google/status'),
 
   driveConnectUrl: () => `${API_URL}/auth/google/login`,
@@ -68,7 +101,8 @@ export const api = {
       body: JSON.stringify({ fileId }),
     }),
 
-  listFiles: () => request<DataroomFile[]>('/files'),
+  listFiles: (query?: string) =>
+    request<DataroomFile[]>(`/files${query ? `?q=${encodeURIComponent(query)}` : ''}`),
 
   uploadFile: (file: File) => {
     const formData = new FormData()
