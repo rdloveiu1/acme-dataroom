@@ -30,12 +30,12 @@ Both are on free tiers, which means two things worth knowing before you click ar
   well-formed email works. The data room is shared: every signed-up user sees the same files,
   matching how a real due-diligence data room works for a deal team.
 
-![Login](docs/screenshots/05-login.png)
-![Empty state](docs/screenshots/01-empty-state.png)
-![Drive import dialog](docs/screenshots/02-drive-import-dialog.png)
-![Imported files](docs/screenshots/03-imported-files.png)
+![Login](docs/screenshots/01-login.png)
+![Search with no matches](docs/screenshots/02-empty-state.png)
+![Drive import dialog](docs/screenshots/03-drive-import-dialog.png)
+![Imported files](docs/screenshots/04-imported-files.png)
+![Delete confirmation](docs/screenshots/05-delete-confirm.png)
 ![Search](docs/screenshots/06-search.png)
-![Delete confirmation](docs/screenshots/04-delete-confirm.png)
 
 ## Architecture
 
