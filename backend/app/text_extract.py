@@ -16,16 +16,28 @@ _DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.doc
 def extract_text(file_path: str, mime_type: str) -> str | None:
     try:
         if mime_type == "text/plain":
-            return _extract_txt(file_path)
-        if mime_type == "application/pdf":
-            return _extract_pdf(file_path)
-        if mime_type == _DOCX_MIME:
-            return _extract_docx(file_path)
+            text = _extract_txt(file_path)
+        elif mime_type == "application/pdf":
+            text = _extract_pdf(file_path)
+        elif mime_type == _DOCX_MIME:
+            text = _extract_docx(file_path)
+        else:
+            return None
     except Exception:
         logger.warning(
             "Text extraction failed for %s (%s)", file_path, mime_type, exc_info=True
         )
-    return None
+        return None
+
+    if text is None:
+        return None
+
+    # Postgres TEXT columns reject NUL bytes outright (raises at INSERT time,
+    # not here) -- malformed/binary-embedded PDFs can produce them in
+    # extracted text. Stripping is safe: a NUL mid-string isn't meaningful
+    # searchable content anyway.
+    text = text.replace("\x00", "")
+    return text or None
 
 
 def _extract_txt(file_path: str) -> str | None:

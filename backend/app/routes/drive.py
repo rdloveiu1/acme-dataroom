@@ -76,6 +76,13 @@ def import_file():
         content_text=extract_text(destination_path, mime_type),
     )
     db.session.add(file_row)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        if os.path.exists(destination_path):
+            os.remove(destination_path)
+        current_app.logger.exception("Failed to save imported Drive file %s", google_file_id)
+        return jsonify({"error": "import_failed"}), 500
 
     return jsonify(file_row.to_dict()), 201
